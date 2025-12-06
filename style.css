@@ -1,0 +1,89 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    font-family: 'Arial', sans-serif;
+}
+
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+}
+
+#canvas-container {
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Status indicator */
+.status-indicator {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 5px;
+    font-size: 14px;
+    z-index: 1000;
+    pointer-events: auto;
+}
+
+.status-connected {
+    background-color: rgba(0, 150, 0, 0.8);
+}
+
+.status-disconnected {
+    background-color: rgba(200, 0, 0, 0.8);
+}
+
+/* MIDI device selector */
+.midi-selector {
+    position: absolute;
+    padding: 8px 12px;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 5px;
+    font-size: 14px;
+    z-index: 1000;
+    cursor: pointer;
+    min-width: 200px;
+    pointer-events: auto;
+}
+
+.midi-selector:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.midi-selector option {
+    background-color: rgba(0, 0, 0, 0.95);
+    color: white;
+}
+
+/* Instructions overlay */
+.instructions {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 25px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 8px;
+    font-size: 16px;
+    z-index: 1000;
+    text-align: center;
+}
+
+.instructions.hidden {
+    display: none;
+}
