@@ -10,6 +10,10 @@ let statusDiv;
 let instructionsDiv;
 let eventSource; // SSE connection
 
+// Audio analysis
+let mic;
+let fft;
+
 let videoWidth;
 let videoHeight;
 let videoOffsetX;
@@ -46,6 +50,7 @@ function setup() {
   createStatusIndicator();
   createInstructions();
   initSSE();
+  initAudio();
 }
 
 function draw() {
@@ -54,6 +59,10 @@ function draw() {
   if (capture) {
     image(capture, videoOffsetX, videoOffsetY, videoWidth, videoHeight);
   }
+  
+  // Draw waveform overlay
+  drawWaveform();
+  
   updateNoteAnimations();
 }
 
@@ -290,6 +299,48 @@ function handleSSENote(data) {
       }
     }
   }, data.duration);
+}
+
+// ============================================
+// Audio Analysis
+// ============================================
+function initAudio() {
+  // Create microphone input
+  mic = new p5.AudioIn();
+  mic.start();
+  
+  // Create FFT analyzer with 256 bins
+  fft = new p5.FFT(0, 128);
+  fft.setInput(mic);
+  
+  console.log('Microphone and FFT analyzer initialized');
+}
+
+function drawWaveform() {
+  if (!fft) return;
+  
+  // Get waveform data
+  let waveform = fft.waveform();
+  
+  // Draw waveform across full screen width
+  push();
+  noFill();
+  stroke(255); // White stroke
+  strokeWeight(2);
+  
+  beginShape();
+  for (let i = 0; i < waveform.length; i++) {
+    // Map i to x position across full width
+    let x = map(i, 0, waveform.length - 1, 0, windowWidth);
+    
+    // Map waveform value to y position in middle of screen
+    let y = map(waveform[i], -1, 1, windowHeight, 0);
+    
+    vertex(x, y);
+  }
+  endShape();
+  
+  pop();
 }
 
 function createMIDISelector() {
