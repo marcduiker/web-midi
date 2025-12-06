@@ -1,4 +1,3 @@
-// Global variables
 let midiAccess = null;
 let midiOutput = null;
 let midiSelector;
@@ -8,13 +7,11 @@ let currentNote = null;
 let statusDiv;
 let instructionsDiv;
 
-// Video dimensions (16:9 aspect ratio)
 let videoWidth;
 let videoHeight;
 let videoOffsetX;
 let videoOffsetY;
 
-// Animation configuration
 const ANIMATION_CONFIG = {
   circleSize: 60,
   circleColor: 255,
@@ -26,66 +23,38 @@ const ANIMATION_CONFIG = {
   randomXRange: true
 };
 
-// MIDI configuration
 const MIDI_NOTE_MIN = 48;  // C3
 const MIDI_NOTE_MAX = 60;  // C4
 const MIDI_CHANNEL = 1;
 const MIDI_VELOCITY = 100;
 
-// Note name mapping
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 
-// ============================================
-// P5js Setup
-// ============================================
 function setup() {
-  // Create canvas matching window dimensions
   createCanvas(windowWidth, windowHeight);
-  
-  // Calculate 16:9 video dimensions
   calculateVideoDimensions();
-  
-  // Initialize webcam capture with 16:9 aspect ratio constraint
   capture = createCapture({
     video: {
       aspectRatio: 16/9
     }
   });
   capture.size(videoWidth, videoHeight);
-  capture.hide(); // Hide the default video element
-  
-  // Initialize MIDI
+  capture.hide();
   initMIDI();
-  
-  // Create MIDI device selector
   createMIDISelector();
-  
-  // Create status indicator
   createStatusIndicator();
-  
-  // Create instructions
   createInstructions();
 }
 
-// ============================================
-// P5js Draw Loop
-// ============================================
 function draw() {
-  // Draw black background
   background(0);
   
-  // Draw webcam capture in 16:9 aspect ratio, centered vertically
   if (capture) {
     image(capture, videoOffsetX, videoOffsetY, videoWidth, videoHeight);
   }
-  
-  // Update and display all note animations
   updateNoteAnimations();
 }
 
-// ============================================
-// Window Resize Handler
-// ============================================
 function windowResized() {
   resizeCanvas(windowWidth, windowHeight);
   calculateVideoDimensions();
@@ -94,9 +63,6 @@ function windowResized() {
   }
 }
 
-// ============================================
-// Video Dimension Calculator
-// ============================================
 function calculateVideoDimensions() {
   const aspectRatio = 16 / 9;
   
@@ -110,15 +76,11 @@ function calculateVideoDimensions() {
     videoWidth = windowWidth;
     videoHeight = videoWidth / aspectRatio;
   }
-  
-  // Calculate offsets to center the video
+
   videoOffsetX = (windowWidth - videoWidth) / 2;
   videoOffsetY = (windowHeight - videoHeight) / 2;
 }
 
-// ============================================
-// Mouse Event Handlers
-// ============================================
 function mousePressed() {
   // Check if mouse is within canvas bounds but outside UI element areas
   // Exclude top 100px where UI elements are located
@@ -132,7 +94,7 @@ function mousePressed() {
       instructionsDiv.addClass('hidden');
     }
     
-    return false; // Prevent default behavior
+    return false;
   }
 }
 
@@ -141,13 +103,10 @@ function mouseReleased() {
   if (currentNote !== null) {
     sendNoteOff(currentNote);
     currentNote = null;
-    return false; // Prevent default behavior
+    return false;
   }
 }
 
-// ============================================
-// MIDI Functions
-// ============================================
 function initMIDI() {
   if (navigator.requestMIDIAccess) {
     navigator.requestMIDIAccess()
@@ -161,24 +120,18 @@ function initMIDI() {
 function onMIDISuccess(midi) {
   midiAccess = midi;
   console.log('MIDI Access obtained');
-  
-  // Get all available MIDI outputs
   const outputs = Array.from(midiAccess.outputs.values());
   
   if (outputs.length > 0) {
-    // Set the first device as default
     midiOutput = outputs[0];
     console.log('MIDI Output:', midiOutput.name);
     updateStatus(`Connected: ${midiOutput.name}`, true);
-    
-    // Populate the selector
     populateMIDISelector(outputs);
   } else {
     console.warn('No MIDI outputs available');
     updateStatus('No MIDI devices found', false);
   }
-  
-  // Log all available outputs
+
   outputs.forEach((output, index) => {
     console.log(`Output ${index}: ${output.name}`);
   });
@@ -198,14 +151,11 @@ function sendNoteOn(midiNumber) {
   // Calculate MIDI status byte for Note On
   const noteOnStatus = 0x90 | (MIDI_CHANNEL - 1);
   
-  // Send Note On message
   midiOutput.send([noteOnStatus, midiNumber, MIDI_VELOCITY]);
   console.log(`Note On: Channel ${MIDI_CHANNEL}, Note ${midiNumber} (${midiNumberToNoteName(midiNumber)}), Velocity ${MIDI_VELOCITY}`);
-  
-  // Store current note
+
   currentNote = midiNumber;
   
-  // Create visual animation
   createNoteAnimation(midiNumberToNoteName(midiNumber), midiNumber);
 }
 
@@ -218,7 +168,6 @@ function sendNoteOff(midiNumber) {
   // Calculate MIDI status byte for Note Off
   const noteOffStatus = 0x80 | (MIDI_CHANNEL - 1);
   
-  // Send Note Off message
   midiOutput.send([noteOffStatus, midiNumber, 0]);
   console.log(`Note Off: Channel ${MIDI_CHANNEL}, Note ${midiNumber} (${midiNumberToNoteName(midiNumber)})`);
 }
@@ -229,9 +178,6 @@ function midiNumberToNoteName(midiNumber) {
   return noteName + octave;
 }
 
-// ============================================
-// UI Functions
-// ============================================
 function createStatusIndicator() {
   statusDiv = createDiv('Connecting to MIDI...');
   statusDiv.class('status-indicator');
@@ -250,7 +196,7 @@ function updateStatus(message, isConnected) {
 }
 
 function createInstructions() {
-  instructionsDiv = createDiv('Click and hold anywhere to play random MIDI notes');
+  instructionsDiv = createDiv('Select a MIDI device and click and hold anywhere to play random MIDI notes');
   instructionsDiv.class('instructions');
   instructionsDiv.position(windowWidth / 2, windowHeight - 70);
 }
@@ -352,10 +298,8 @@ function createNoteAnimation(noteName, midiNumber) {
               videoOffsetX + padding, 
               videoOffsetX + videoWidth - padding);
   
-  // Start at bottom of video area
   let y = videoOffsetY + videoHeight - ANIMATION_CONFIG.circleSize;
   
-  // Create and add new animation
   noteAnimations.push(new NoteAnimation(noteName, x, y));
 }
 
