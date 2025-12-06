@@ -102,6 +102,15 @@ function mouseReleased() {
   // Send note off for currently playing note
   if (currentNote !== null) {
     sendNoteOff(currentNote);
+    
+    // Find and release the active animation for this note
+    for (let anim of noteAnimations) {
+      if (anim.midiNumber === currentNote && anim.isActive) {
+        anim.release();
+        break;
+      }
+    }
+    
     currentNote = null;
     return false;
   }
@@ -318,8 +327,9 @@ function createWebcamCapture(deviceId) {
 // Note Animation System
 // ============================================
 class NoteAnimation {
-  constructor(noteName, x, y) {
+  constructor(noteName, x, y, midiNumber) {
     this.note = noteName;
+    this.midiNumber = midiNumber;
     this.x = x;
     this.y = y;
     this.targetY = 0;
@@ -328,15 +338,29 @@ class NoteAnimation {
     this.speed = ANIMATION_CONFIG.speed;
     this.age = 0;
     this.maxAge = ANIMATION_CONFIG.maxAge;
+    this.isActive = true; // Note is being held
+    this.releaseAge = null; // Age when note was released
   }
   
   update() {
     // Move upward
     this.y -= this.speed;
     
-    // Update age and alpha
+    // Update age
     this.age++;
-    this.alpha = map(this.age, 0, this.maxAge, ANIMATION_CONFIG.startAlpha, ANIMATION_CONFIG.endAlpha);
+    
+    // Only start fading after note is released
+    if (!this.isActive) {
+      if (this.releaseAge === null) {
+        this.releaseAge = this.age;
+      }
+      const fadeAge = this.age - this.releaseAge;
+      this.alpha = map(fadeAge, 0, this.maxAge, ANIMATION_CONFIG.startAlpha, ANIMATION_CONFIG.endAlpha);
+    }
+  }
+  
+  release() {
+    this.isActive = false;
   }
   
   display() {
@@ -361,7 +385,13 @@ class NoteAnimation {
   }
   
   isDead() {
-    return this.age >= this.maxAge || this.y < -this.circleSize;
+    // Only die if released and faded out, or if off screen
+    if (this.y < -this.circleSize) return true;
+    if (!this.isActive && this.releaseAge !== null) {
+      const fadeAge = this.age - this.releaseAge;
+      return fadeAge >= this.maxAge;
+    }
+    return false;
   }
 }
 
@@ -375,7 +405,7 @@ function createNoteAnimation(noteName, midiNumber) {
   
   let y = videoOffsetY + videoHeight - ANIMATION_CONFIG.circleSize;
   
-  noteAnimations.push(new NoteAnimation(noteName, x, y));
+  noteAnimations.push(new NoteAnimation(noteName, x, y, midiNumber));
 }
 
 function updateNoteAnimations() {
