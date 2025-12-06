@@ -1,6 +1,8 @@
 let midiAccess = null;
 let midiOutput = null;
 let midiSelector;
+let webcamSelector;
+let videoDevices = [];
 let capture;
 let noteAnimations = [];
 let currentNote = null;
@@ -33,15 +35,13 @@ const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 
 function setup() {
   createCanvas(windowWidth, windowHeight);
   calculateVideoDimensions();
-  capture = createCapture({
-    video: {
-      aspectRatio: 16/9
-    }
-  });
-  capture.size(videoWidth, videoHeight);
-  capture.hide();
+  
+  // Enumerate video devices first, then create capture
+  enumerateVideoDevices();
+  
   initMIDI();
   createMIDISelector();
+  createWebcamSelector();
   createStatusIndicator();
   createInstructions();
 }
@@ -237,6 +237,81 @@ function onMIDIDeviceChange() {
     console.log('Switched to MIDI Output:', midiOutput.name);
     updateStatus(`Connected: ${midiOutput.name}`, true);
   }
+}
+
+function createWebcamSelector() {
+  webcamSelector = createSelect();
+  webcamSelector.position(240, 60);
+  webcamSelector.class('webcam-selector');
+  webcamSelector.option('Loading cameras...');
+  webcamSelector.disable();
+  webcamSelector.changed(onWebcamDeviceChange);
+}
+
+function enumerateVideoDevices() {
+  navigator.mediaDevices.enumerateDevices()
+    .then(devices => {
+      videoDevices = devices.filter(device => device.kind === 'videoinput');
+      console.log('Video devices found:', videoDevices.length);
+      
+      if (videoDevices.length > 0) {
+        populateWebcamSelector();
+        // Create capture with first device
+        createWebcamCapture(videoDevices[0].deviceId);
+      } else {
+        console.warn('No video devices found');
+      }
+    })
+    .catch(err => {
+      console.error('Error enumerating devices:', err);
+    });
+}
+
+function populateWebcamSelector() {
+  if (!webcamSelector) return;
+  
+  // Clear existing options
+  webcamSelector.html('');
+  
+  // Add all video devices to the selector
+  videoDevices.forEach((device, index) => {
+    const label = device.label || `Camera ${index + 1}`;
+    webcamSelector.option(label, index);
+  });
+  
+  // Enable the selector
+  webcamSelector.enable();
+  
+  // Set the first device as selected
+  webcamSelector.selected(0);
+}
+
+function onWebcamDeviceChange() {
+  const selectedIndex = parseInt(webcamSelector.value());
+  
+  if (selectedIndex >= 0 && selectedIndex < videoDevices.length) {
+    const deviceId = videoDevices[selectedIndex].deviceId;
+    console.log('Switching to camera:', videoDevices[selectedIndex].label || deviceId);
+    
+    // Remove old capture
+    if (capture) {
+      capture.remove();
+    }
+    
+    // Create new capture with selected device
+    createWebcamCapture(deviceId);
+  }
+}
+
+function createWebcamCapture(deviceId) {
+  capture = createCapture({
+    video: {
+      deviceId: { exact: deviceId },
+      aspectRatio: 16/9
+    }
+  });
+  capture.size(videoWidth, videoHeight);
+  capture.hide();
 }
 
 // ============================================
