@@ -8,6 +8,7 @@ let noteAnimations = [];
 let currentNote = null;
 let statusDiv;
 let instructionsDiv;
+let eventSource; // SSE connection
 
 let videoWidth;
 let videoHeight;
@@ -44,6 +45,7 @@ function setup() {
   createWebcamSelector();
   createStatusIndicator();
   createInstructions();
+  initSSE();
 }
 
 function draw() {
@@ -89,7 +91,6 @@ function mousePressed() {
     const note = floor(random(MIDI_NOTE_MIN, MIDI_NOTE_MAX + 1));
     sendNoteOn(note);
     
-    // Hide instructions after first interaction
     if (instructionsDiv) {
       instructionsDiv.addClass('hidden');
     }
@@ -187,6 +188,26 @@ function midiNumberToNoteName(midiNumber) {
   return noteName + octave;
 }
 
+function noteNameToMidiNumber(noteName) {
+  // Parse note name like "C3", "D#4", etc.
+  const match = noteName.match(/^([A-G]#?)(-?\d+)$/);
+  if (!match) {
+    console.error('Invalid note name:', noteName);
+    return null;
+  }
+  
+  const note = match[1];
+  const octave = parseInt(match[2]);
+  
+  const noteIndex = NOTE_NAMES.indexOf(note);
+  if (noteIndex === -1) {
+    console.error('Invalid note:', note);
+    return null;
+  }
+  
+  return (octave + 1) * 12 + noteIndex;
+}
+
 function createStatusIndicator() {
   statusDiv = createDiv('Connecting to MIDI...');
   statusDiv.class('status-indicator');
@@ -205,9 +226,70 @@ function updateStatus(message, isConnected) {
 }
 
 function createInstructions() {
-  instructionsDiv = createDiv('Select a MIDI device and click and hold anywhere to play random MIDI notes');
+  instructionsDiv = createDiv('Click and hold anywhere to play random MIDI notes');
   instructionsDiv.class('instructions');
   instructionsDiv.position(windowWidth / 2, windowHeight - 70);
+}
+
+// ============================================
+// Server-Sent Events (SSE)
+// ============================================
+function initSSE() {
+  const sseUrl = 'http://localhost:5500/events';
+  console.log('Connecting to SSE:', sseUrl);
+  
+  eventSource = new EventSource(sseUrl);
+  
+  eventSource.onopen = function() {
+    console.log('SSE connection opened');
+  };
+  
+  eventSource.onmessage = function(event) {
+    try {
+      const data = JSON.parse(event.data);
+      console.log('SSE event received:', data);
+      handleSSENote(data);
+    } catch (error) {
+      console.error('Error parsing SSE data:', error);
+    }
+  };
+  
+  eventSource.onerror = function(error) {
+    console.error('SSE connection error:', error);
+    if (eventSource.readyState === EventSource.CLOSED) {
+      console.log('SSE connection closed, attempting to reconnect...');
+    }
+  };
+}
+
+function handleSSENote(data) {
+  if (!data.note || !data.duration) {
+    console.error('Invalid SSE data, missing note or duration:', data);
+    return;
+  }
+  
+  const midiNumber = noteNameToMidiNumber(data.note);
+  if (midiNumber === null) {
+    return;
+  }
+  
+  console.log(`Playing SSE note: ${data.note} (MIDI ${midiNumber}) for ${data.duration}ms`);
+  
+  // Send Note On
+  sendNoteOn(midiNumber);
+  
+  // Schedule Note Off after duration
+  setTimeout(() => {
+    sendNoteOff(midiNumber);
+    
+    // Find and release the animation for this note
+    for (let anim of noteAnimations) {
+      if (anim.midiNumber === midiNumber && anim.isActive) {
+        anim.release();
+        break;
+      }
+    }
+  }, data.duration);
 }
 
 function createMIDISelector() {
