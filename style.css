@@ -22,8 +22,22 @@ canvas {
     height: 100vh;
 }
 
-/* Status indicator */
+/* Status indicators */
 .status-indicator {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    border-radius: 5px;
+    font-size: 14px;
+    z-index: 1000;
+    pointer-events: auto;
+    width: calc(50% - 30px);
+}
+
+.sse-status-indicator {
     position: absolute;
     top: 20px;
     right: 20px;
@@ -34,6 +48,7 @@ canvas {
     font-size: 14px;
     z-index: 1000;
     pointer-events: auto;
+    width: calc(50% - 30px);
 }
 
 .status-connected {

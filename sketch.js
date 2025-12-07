@@ -7,6 +7,7 @@ let capture;
 let noteAnimations = [];
 let currentNote = null;
 let statusDiv;
+let sseStatusDiv;
 let instructionsDiv;
 let eventSource; // SSE connection
 
@@ -48,6 +49,7 @@ function setup() {
   createMIDISelector();
   createWebcamSelector();
   createStatusIndicator();
+  createSSEStatusIndicator();
   createInstructions();
   initSSE();
   initAudio();
@@ -234,6 +236,23 @@ function updateStatus(message, isConnected) {
   }
 }
 
+function createSSEStatusIndicator() {
+  sseStatusDiv = createDiv('Connecting to SSE...');
+  sseStatusDiv.class('sse-status-indicator');
+  sseStatusDiv.position(windowWidth / 2 + 20, 20);
+}
+
+function updateSSEStatus(message, isConnected) {
+  if (sseStatusDiv) {
+    sseStatusDiv.html(message);
+    if (isConnected) {
+      sseStatusDiv.class('sse-status-indicator status-connected');
+    } else {
+      sseStatusDiv.class('sse-status-indicator status-disconnected');
+    }
+  }
+}
+
 function createInstructions() {
   instructionsDiv = createDiv('Click and hold anywhere to play random MIDI notes');
   instructionsDiv.class('instructions');
@@ -251,6 +270,7 @@ function initSSE() {
   
   eventSource.onopen = function() {
     console.log('SSE connection opened');
+    updateSSEStatus('SSE Connected', true);
   };
   
   eventSource.onmessage = function(event) {
@@ -267,6 +287,11 @@ function initSSE() {
     console.error('SSE connection error:', error);
     if (eventSource.readyState === EventSource.CLOSED) {
       console.log('SSE connection closed, attempting to reconnect...');
+      updateSSEStatus('SSE Disconnected', false);
+    } else if (eventSource.readyState === EventSource.CONNECTING) {
+      updateSSEStatus('SSE Connecting...', false);
+    } else {
+      updateSSEStatus('SSE Error', false);
     }
   };
 }
